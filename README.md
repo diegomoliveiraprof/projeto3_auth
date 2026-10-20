@@ -2,7 +2,7 @@
 
 API REST para consultar e gerenciar livros e autores, desenvolvida com Django e Django REST Framework com Django-Filter para filtros de pesquisa. Os dados são armazenados em um banco SQLite.
 
-**Nesta versão da atividade projeto3 foi adicionada a atutenticação via sessão e token**
+**Nesta versão do projeto foi adicionada autenticação por sessão e token.**
 
 ## Requisitos
 
@@ -69,20 +69,67 @@ python importarDados.py
 
 Execute a importação apenas uma vez por banco: o script insere os registros do CSV e não verifica se os livros já foram importados. Pode gerar duplicação de dados.
 
-## Endpoints
+## Rotas da API
 
-O Django REST Framework disponibiliza a interface navegável da API no navegador:
+O Django REST Framework disponibiliza a interface navegável da API no navegador.
 
-| Recurso | Endpoint |
-| --- | --- |
-| Autores | `http://127.0.0.1:8000/api/autores/` |
-| Livros | `http://127.0.0.1:8000/api/livros/` |
-| Administração Django | `http://127.0.0.1:8000/admin/` |
+| Recurso | Rota | Operações |
+| --- | --- | --- |
+| Autores | `/api/autores/` | Listar (`GET`) e criar (`POST`) |
+| Autor específico | `/api/autores/{id}/` | Consultar (`GET`), atualizar (`PUT`/`PATCH`) e excluir (`DELETE`) |
+| Livros | `/api/livros/` | Listar (`GET`) e criar (`POST`) |
+| Livro específico | `/api/livros/{id}/` | Consultar (`GET`), atualizar (`PUT`/`PATCH`) e excluir (`DELETE`) |
+| Obter token | `/api/token/` | Obter token (`POST`) |
+| Administração Django | `/admin/` | Painel administrativo |
 
-Os endpoints de autores e livros oferecem operações CRUD. A listagem de livros aceita filtros por título, nome do autor, ISBN e ano, por exemplo:
+Substitua `{id}` pelo identificador do autor ou livro. As rotas de autores e livros oferecem operações CRUD. A listagem de livros aceita filtros por título, nome do autor, ISBN e ano, por exemplo:
 
 ```text
 http://127.0.0.1:8000/api/livros/?titulo=Dom%20Casmurro
 http://127.0.0.1:8000/api/livros/?autor__nome=Machado%20de%20Assis
 http://127.0.0.1:8000/api/livros/?ano=1899
 ```
+
+## Autenticação e permissões
+
+As consultas (`GET`, `HEAD` e `OPTIONS`) são públicas. Para criar, atualizar ou excluir registros (`POST`, `PUT`, `PATCH` e `DELETE`), é necessário estar autenticado. A API aceita autenticação por token e por sessão do Django.
+
+### Autenticação por token
+
+Crie um usuário, caso ainda não tenha um:
+
+```bash
+python manage.py createsuperuser
+```
+
+Envie um `POST` para `http://127.0.0.1:8000/api/token/` com os campos `username` e `password` no corpo da requisição. A chamada pode ser feita pela interface navegável da API ou por um cliente HTTP.
+
+A resposta contém o token:
+
+```json
+{"token": "seu-token"}
+```
+
+Inclua esse valor no cabeçalho `Authorization` das requisições que alteram dados:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/livros/ \
+  -H "Authorization: Token seu-token" \
+  -H "Content-Type: application/json" \
+  -d '{"titulo": "Novo livro", "autor": 1, "isbn": "1234567890", "paginas": 200, "ano": 2026}'
+```
+
+No Prompt de Comando do Windows (CMD), use `^` para continuar o comando na linha seguinte:
+
+```cmd
+curl -X POST http://127.0.0.1:8000/api/livros/ ^
+  -H "Authorization: Token seu-token" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"titulo\": \"Novo livro\", \"autor\": 1, \"isbn\": \"1234567890\", \"paginas\": 200, \"ano\": 2026}"
+```
+
+Substitua os dados do exemplo pelos campos e valores válidos para o recurso. Mantenha o token em segredo: ele autentica as requisições como o usuário associado.
+
+### Autenticação por sessão
+
+A autenticação por sessão usa a sessão autenticada do Django no navegador. Por exemplo, um usuário autenticado no painel `/admin/` pode usar a mesma sessão na interface navegável da API. Nas requisições que alteram dados, o Django também exige a proteção CSRF; prefira o formulário da interface navegável ou envie o cookie e o token CSRF correspondentes.
